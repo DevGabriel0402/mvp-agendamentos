@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { FiLogOut, FiCalendar } from 'react-icons/fi';
+import { FiLogOut, FiCalendar, FiGrid, FiList } from 'react-icons/fi';
 import { Button } from '../../components/ui/Button';
 import { Loader } from '../../components/ui/Loader';
 import { useAuth } from '../../hooks/useAuth';
@@ -72,6 +72,41 @@ const GridServicos = styled.div`
   gap: 16px;
 `;
 
+const SectionHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+`;
+
+const ViewToggle = styled.div`
+  display: flex;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.md};
+  overflow: hidden;
+
+  button {
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: ${({ theme }) => theme.colors.textSecondary};
+    transition: all 0.2s;
+
+    &.active {
+      background: rgba(221, 167, 165, 0.1);
+      color: ${({ theme }) => theme.colors.primary};
+    }
+  }
+`;
+
+const ListServicos = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
 const EmptyState = styled.div`
   text-align: center;
   padding: 48px 24px;
@@ -88,6 +123,7 @@ export default function Home() {
 
   const [favoritos, setFavoritos] = useState([]);
   const [clienteCache, setClienteCache] = useState(null);
+  const [viewMode, setViewMode] = useState('grid');
 
   useEffect(() => {
     const salvos = JSON.parse(localStorage.getItem('mvp_favoritos')) || [];
@@ -140,7 +176,25 @@ export default function Home() {
 
       <Content>
         <div>
-          <SectionTitle>Serviços Disponíveis</SectionTitle>
+          <SectionHeader>
+            <SectionTitle style={{ marginBottom: 0 }}>Serviços Disponíveis</SectionTitle>
+            <ViewToggle>
+              <button
+                className={viewMode === 'grid' ? 'active' : ''}
+                onClick={() => setViewMode('grid')}
+                title="Ver em Cards"
+              >
+                <FiGrid size={18} />
+              </button>
+              <button
+                className={viewMode === 'list' ? 'active' : ''}
+                onClick={() => setViewMode('list')}
+                title="Ver em Lista"
+              >
+                <FiList size={18} />
+              </button>
+            </ViewToggle>
+          </SectionHeader>
 
           {loading ? (
             <Loader text="Carregando serviços..." />
@@ -148,7 +202,7 @@ export default function Home() {
             <EmptyState>
               <p>Nenhum serviço disponível no momento.</p>
             </EmptyState>
-          ) : (
+          ) : viewMode === 'grid' ? (
             <GridServicos>
               {servicos.map(srv => (
                 <ServiceCard
@@ -160,6 +214,19 @@ export default function Home() {
                 />
               ))}
             </GridServicos>
+          ) : (
+            <ListServicos>
+              {servicos.map(srv => (
+                <ServiceCard
+                  key={srv.id}
+                  servico={srv}
+                  variant="list"
+                  isFavoritado={favoritos.includes(srv.id)}
+                  onFavoritar={handleFavoritar}
+                  onAgendar={handleAgendar}
+                />
+              ))}
+            </ListServicos>
           )}
         </div>
       </Content>
