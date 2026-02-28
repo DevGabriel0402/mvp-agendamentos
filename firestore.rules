@@ -1,0 +1,57 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Função auxiliar: verificar se usuário está logado
+    function isLogado() {
+      return request.auth != null;
+    }
+    
+    // Função auxiliar: verificar se usuário logado NÃO é anônimo (logo, é admin através de email/senha)
+    // No Firebase Auth, provedores de email/senha têm 'password' no provider
+    function isAdmin() {
+      return isLogado() && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    // COLEÇÃO: servicos (Leitura pública/anônima, escrita apenas Admin)
+    match /servicos/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // COLEÇÃO: configuracoes (Leitura pública/anônima, escrita apenas Admin)
+    match /configuracoes/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // COLEÇÃO: clientes
+    match /clientes/{docId} {
+      // Admin pode tudo
+      allow read, write: if isAdmin();
+      // Anônimo pode criar cliente para si, ou ler se souber o ID exato (fluxo de agendamento)
+      allow create: if isLogado();
+      allow read: if isLogado();
+    }
+
+    // COLEÇÃO: agendamentos
+    match /agendamentos/{docId} {
+      allow read, write: if isAdmin();
+      // Anônimo pode criar, e pode ler seus próprios agendamentos (opcional, aqui permitimos criacao)
+      allow create: if isLogado();
+      allow read: if isLogado();
+    }
+
+    // COLEÇÃO: administradores
+    match /administradores/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // COLEÇÃO: feedbacks
+    match /feedbacks/{docId} {
+      allow read, write: if isAdmin();
+      allow create: if isLogado();
+      allow read: if true; // Feedbacks podem ser lidos publicamente para exibir avaliações
+    }
+  }
+}
