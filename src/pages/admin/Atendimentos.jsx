@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { collection, query, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import { useAuth } from '../../hooks/useAuth';
 import { FiCheck, FiX, FiCalendar, FiClock, FiUser, FiPhone, FiCreditCard } from 'react-icons/fi';
 import { Button } from '../../components/ui/Button';
 import { DatePicker } from '../../components/ui/DatePicker';
@@ -80,6 +81,7 @@ const InfoRow = styled.div`
 `;
 
 export default function Atendimentos() {
+    const { empresa } = useAuth();
     const [atendimentos, setAtendimentos] = useState([]);
     const [filtro, setFiltro] = useState('todos');
     const [dataFiltro, setDataFiltro] = useState('');
@@ -94,8 +96,13 @@ export default function Atendimentos() {
 
     const fetchAtendimentos = async () => {
         try {
+            if (!empresa?.id) return;
+
             setLoading(true);
-            const q = query(collection(db, 'agendamentos'));
+            const q = query(
+                collection(db, 'agendamentos'),
+                where('empresaId', '==', empresa.id)
+            );
             const snap = await getDocs(q);
             let data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -116,7 +123,7 @@ export default function Atendimentos() {
 
     useEffect(() => {
         fetchAtendimentos();
-    }, []);
+    }, [empresa?.id]);
 
     const handleStatusChange = async (id, newStatus) => {
         try {

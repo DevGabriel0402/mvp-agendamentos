@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import { useAuth } from '../../hooks/useAuth';
 import { FiSearch, FiPhone, FiMapPin } from 'react-icons/fi';
 import { Input } from '../../components/ui/Input';
 import { Loader } from '../../components/ui/Loader';
@@ -86,14 +87,21 @@ const Badge = styled.span`
 `;
 
 export default function Clientes() {
+    const { empresa } = useAuth();
     const [clientes, setClientes] = useState([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         const fetchClientes = async () => {
+            if (!empresa?.id) return;
+
             try {
-                const q = query(collection(db, 'clientes'), orderBy('createdAt', 'desc'));
+                const q = query(
+                    collection(db, 'clientes'),
+                    where('empresaId', '==', empresa.id),
+                    orderBy('createdAt', 'desc')
+                );
                 const snap = await getDocs(q);
                 const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 setClientes(data);
@@ -104,7 +112,7 @@ export default function Clientes() {
             }
         };
         fetchClientes();
-    }, []);
+    }, [empresa?.id]);
 
     const filteredClientes = clientes.filter(c =>
         c.nome?.toLowerCase().includes(search.toLowerCase()) ||

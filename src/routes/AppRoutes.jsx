@@ -25,31 +25,34 @@ export const AppRoutes = () => {
                 {/* Rotas Públicas */}
                 <Route path="/" element={<div className="mobile-app-wrapper"><Splash /></div>} />
 
+                {/* Rotas Dinâmicas de Empresa (CLIENTE) */}
+                <Route path="/:tenantSlug">
+                    <Route index element={<div className="mobile-app-wrapper"><Entrada /></div>} />
+
+                    <Route element={user && user.isAnonymous ? <UserLayout /> : <Navigate to="./" replace />}>
+                        <Route path="home" element={<Home />} />
+                        <Route path="agendamentos" element={<MeusAgendamentos />} />
+                        <Route path="favoritos" element={<Favoritos />} />
+                    </Route>
+
+                    <Route path="agendar/:id" element={
+                        user && user.isAnonymous ?
+                            <div className="mobile-app-wrapper"><Agendamento /></div> :
+                            <Navigate to="./" replace />
+                    } />
+
+                    <Route path="sucesso" element={
+                        user && user.isAnonymous ?
+                            <div className="mobile-app-wrapper"><Sucesso /></div> :
+                            <Navigate to="./" replace />
+                    } />
+                </Route>
+
                 {/* Entrada lida com redirecionamento de acordo com o usuário */}
                 <Route
                     path="/entrada"
                     element={!user ? <div className="mobile-app-wrapper"><Entrada /></div> : <Navigate to={user.isAnonymous ? "/home" : "/admin"} replace />}
                 />
-
-                {/* Rotas do Usuário com TabBar */}
-                <Route element={user && user.isAnonymous ? <UserLayout /> : <Navigate to="/entrada" replace />}>
-                    <Route path="/home" element={<Home />} />
-                    <Route path="/agendamentos" element={<MeusAgendamentos />} />
-                    <Route path="/favoritos" element={<Favoritos />} />
-                </Route>
-
-                {/* Rotas de Usuário Soltas (Max-width 540px genérico, sem TabBar) */}
-                <Route path="/agendar/:id" element={
-                    user && user.isAnonymous ?
-                        <div className="mobile-app-wrapper"><Agendamento /></div> :
-                        <Navigate to="/entrada" replace />
-                } />
-
-                <Route path="/sucesso" element={
-                    user && user.isAnonymous ?
-                        <div className="mobile-app-wrapper"><Sucesso /></div> :
-                        <Navigate to="/entrada" replace />
-                } />
 
                 {/* Rotas Admin */}
                 <Route path="/admin/login" element={

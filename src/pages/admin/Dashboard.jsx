@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { FiUsers, FiCalendar, FiCheckCircle, FiClock, FiDollarSign } from 'react-icons/fi';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import { useAuth } from '../../hooks/useAuth';
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell
@@ -77,6 +78,7 @@ const ChartBox = styled.div`
 const COLORS = ['#10B981', '#F59E0B', '#EF4444', '#DDA7A5'];
 
 export default function Dashboard() {
+    const { empresa } = useAuth();
     const [stats, setStats] = useState({
         totalClientes: 0,
         totalAgendamentos: 0,
@@ -93,9 +95,14 @@ export default function Dashboard() {
     useEffect(() => {
         // Buscar contagem real do Firebase
         const fetchStats = async () => {
+            if (!empresa?.id) return;
+
             try {
-                const clientesSnap = await getDocs(collection(db, 'clientes'));
-                const agendamentosSnap = await getDocs(collection(db, 'agendamentos'));
+                const clientesQuery = query(collection(db, 'clientes'), where('empresaId', '==', empresa.id));
+                const agendamentosQuery = query(collection(db, 'agendamentos'), where('empresaId', '==', empresa.id));
+
+                const clientesSnap = await getDocs(clientesQuery);
+                const agendamentosSnap = await getDocs(agendamentosQuery);
 
                 const totalAgendamentos = agendamentosSnap.size;
                 let concluidos = 0;
@@ -166,7 +173,7 @@ export default function Dashboard() {
             }
         };
         fetchStats();
-    }, []);
+    }, [empresa?.id]);
 
     return (
         <div>

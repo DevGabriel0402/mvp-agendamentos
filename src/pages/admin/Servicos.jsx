@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { collection, query, getDocs, orderBy, deleteDoc, doc, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import { useAuth } from '../../hooks/useAuth';
 import { FiPlus, FiImage, FiTrash2, FiEdit, FiGrid, FiList, FiClock } from 'react-icons/fi';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -228,6 +229,7 @@ const ModalContent = styled.div`
 `;
 
 export default function Servicos() {
+    const { empresa } = useAuth();
     const [viewMode, setViewMode] = useState('list');
     const [servicos, setServicos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -245,9 +247,15 @@ export default function Servicos() {
     });
 
     const fetchServicos = async () => {
+        if (!empresa?.id) return;
+
         try {
             setLoading(true);
-            const q = query(collection(db, 'servicos'), orderBy('createdAt', 'desc'));
+            const q = query(
+                collection(db, 'servicos'),
+                where('empresaId', '==', empresa.id),
+                orderBy('createdAt', 'desc')
+            );
             const snap = await getDocs(q);
             setServicos(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         } catch (error) {
@@ -259,7 +267,7 @@ export default function Servicos() {
 
     useEffect(() => {
         fetchServicos();
-    }, []);
+    }, [empresa?.id]);
 
     const handleDelete = async (id) => {
         if (!window.confirm("Certeza que deseja escluir este serviço? Ele sumirá do Agendamento.")) return;
@@ -312,6 +320,7 @@ export default function Servicos() {
                 // Criar novo
                 await addDoc(collection(db, 'servicos'), {
                     ...dadosSalvar,
+                    empresaId: empresa.id,
                     createdAt: serverTimestamp(),
                     ativo: true
                 });
