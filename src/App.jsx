@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { AppRoutes } from './routes/AppRoutes';
 import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from 'styled-components';
@@ -17,7 +18,21 @@ function App() {
     }
   };
 
-  if (loading) return null; // Previne flicker visual
+  useEffect(() => {
+    // Só tentamos remover o loader quando as configurações pararem de carregar
+    if (!loading) {
+      const loader = document.getElementById('initial-loader');
+      if (loader) {
+        loader.style.opacity = '0';
+        const timeout = setTimeout(() => {
+          loader.remove();
+        }, 500);
+        return () => clearTimeout(timeout);
+      }
+    }
+  }, [loading]);
+
+  if (loading) return null; // Mantém o SplashScreen visível enquanto carrega configs do Firebase
 
   return (
     <ThemeProvider theme={customTheme}>
