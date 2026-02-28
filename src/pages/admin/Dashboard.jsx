@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { FiUsers, FiCalendar, FiCheckCircle, FiClock } from 'react-icons/fi';
+import { FiUsers, FiCalendar, FiCheckCircle, FiClock, FiDollarSign } from 'react-icons/fi';
 import { collection, query, getDocs, where } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import {
@@ -81,7 +81,8 @@ export default function Dashboard() {
         totalClientes: 0,
         totalAgendamentos: 0,
         concluidos: 0,
-        pendentes: 0
+        pendentes: 0,
+        faturamentoTotal: 0
     });
 
     const [chartData, setChartData] = useState({
@@ -99,6 +100,7 @@ export default function Dashboard() {
                 const totalAgendamentos = agendamentosSnap.size;
                 let concluidos = 0;
                 let pendentes = 0;
+                let faturamentoTotal = 0;
 
                 const weekCounts = {
                     names: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'],
@@ -109,7 +111,10 @@ export default function Dashboard() {
 
                 agendamentosSnap.forEach(doc => {
                     const data = doc.data();
-                    if (data.status === 'concluido') concluidos++;
+                    if (data.status === 'concluido') {
+                        concluidos++;
+                        faturamentoTotal += Number(data.valorOriginal || 0);
+                    }
                     else if (data.status === 'agendado') pendentes++;
 
                     // Gráfico da Semana
@@ -153,7 +158,8 @@ export default function Dashboard() {
                     totalClientes: clientesSnap.size,
                     totalAgendamentos,
                     concluidos,
-                    pendentes
+                    pendentes,
+                    faturamentoTotal
                 });
             } catch (err) {
                 console.error(err);
@@ -191,12 +197,22 @@ export default function Dashboard() {
                     <div className="value">{stats.concluidos}</div>
                 </StatCard>
 
-                <StatCard $colorMode="primaryDark">
+                {/* <StatCard $colorMode="primaryDark">
                     <div className="header">
                         <span>Clientes Cadastrados</span>
                         <FiUsers />
                     </div>
                     <div className="value">{stats.totalClientes}</div>
+                </StatCard> */}
+
+                <StatCard $colorMode="success">
+                    <div className="header">
+                        <span>Faturamento Total</span>
+                        <FiDollarSign />
+                    </div>
+                    <div className="value">
+                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.faturamentoTotal)}
+                    </div>
                 </StatCard>
             </StatsGrid>
 
