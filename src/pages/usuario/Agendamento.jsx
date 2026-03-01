@@ -143,7 +143,7 @@ export default function Agendamento() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { tenant, loading: loadingTenant } = useTenant();
+    const { tenant, loading: loadingTenant, error: tenantError } = useTenant();
     const { config } = useConfiguracoes(tenant);
 
     const [servico, setServico] = useState(null);
@@ -273,7 +273,26 @@ export default function Agendamento() {
         }
     };
 
-    if (loading || loadingTenant || !servico || !tenant) return <Loader text="Carregando..." fullHeight />;
+    if (loading || loadingTenant) return <Loader text="Carregando..." fullHeight />;
+
+    if (tenantError || !tenant) {
+        return (
+            <Page>
+                <Header>
+                    <button onClick={() => navigate('/')}><FiChevronLeft /></button>
+                    <h2>Empresa não encontrada</h2>
+                </Header>
+                <Content>
+                    <SectionBox>
+                        <p>Desculpe, não conseguimos encontrar as informações desta empresa.</p>
+                        <Button $fullWidth onClick={() => navigate('/')} style={{ marginTop: 20 }}>Voltar ao Início</Button>
+                    </SectionBox>
+                </Content>
+            </Page>
+        );
+    }
+
+    if (!servico) return <Loader text="Buscando serviço..." fullHeight />;
 
     return (
         <Page>

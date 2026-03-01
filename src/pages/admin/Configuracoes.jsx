@@ -127,6 +127,12 @@ export default function Configuracoes() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [novoHorario, setNovoHorario] = useState('');
+    const [cep, setCep] = useState('');
+    const [mapViewState, setMapViewState] = useState({
+        longitude: -46.633308,
+        latitude: -23.55052,
+        zoom: 14
+    });
 
     const [config, setConfig] = useState({
         enderecoEstabelecimento: '',
@@ -141,9 +147,10 @@ export default function Configuracoes() {
 
     useEffect(() => {
         if (empresa) {
+            const coords = empresa.coordenadas || { lat: -23.55052, lng: -46.633308 };
             setConfig({
                 enderecoEstabelecimento: empresa.enderecoEstabelecimento || '',
-                coordenadas: empresa.coordenadas || { lat: -23.55052, lng: -46.633308 },
+                coordenadas: coords,
                 diasFuncionamento: empresa.diasFuncionamento || [1, 2, 3, 4, 5, 6],
                 horariosDisponiveis: empresa.horariosDisponiveis || ["08:00", "09:00", "10:00"],
                 nomeApp: empresa.nome || '',
@@ -151,6 +158,13 @@ export default function Configuracoes() {
                 corTema: empresa.corTema || '#3B82F6',
                 logoUrl: empresa.logoUrl || ''
             });
+
+            setMapViewState(prev => ({
+                ...prev,
+                latitude: coords.lat,
+                longitude: coords.lng
+            }));
+
             setLoading(false);
         } else {
             setLoading(false);
@@ -224,12 +238,53 @@ export default function Configuracoes() {
             const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
             const data = await res.json();
             if (data && data.display_name) {
-                // Simplifica um pouco o texto gigante do nominatim pegando rua + numero + bairro
-                const addressStr = `${data.address.road || ''}, ${data.address.suburb || data.address.city || ''}`.replace(/^, | ,/g, '');
                 setConfig(prev => ({ ...prev, enderecoEstabelecimento: data.display_name }));
             }
         } catch (error) {
             console.error("Erro no reverse geocoding:", error);
+        }
+    };
+
+    const handleCepSearch = async () => {
+        const cleanCep = cep.replace(/\D/g, '');
+        if (cleanCep.length !== 8) {
+            toast.error("CEP inválido");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            // 1. Buscar endereço via ViaCEP
+            const viaCepRes = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+            const viaCepData = await viaCepRes.json();
+
+            if (viaCepData.erro) {
+                toast.error("CEP não encontrado");
+                setLoading(false);
+                return;
+            }
+
+            const fullAddress = `${viaCepData.logradouro}, ${viaCepData.bairro}, ${viaCepData.localidade} - ${viaCepData.uf}`;
+            setConfig(prev => ({ ...prev, enderecoEstabelecimento: fullAddress }));
+
+            // 2. Geocoding para pegar Lat/Lng via Nominatim
+            const searchRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(fullAddress)}`);
+            const searchData = await searchRes.json();
+
+            if (searchData && searchData.length > 0) {
+                const { lat, lon } = searchData[0];
+                const coords = { lat: parseFloat(lat), lng: parseFloat(lon) };
+                setConfig(prev => ({ ...prev, coordenadas: coords }));
+                setMapViewState(prev => ({ ...prev, latitude: coords.lat, longitude: coords.lng }));
+                toast.success("Endereço e mapa atualizados!");
+            } else {
+                toast.success("CEP encontrado, mas não conseguimos localizar no mapa. Por favor, ajuste o pino manualmente.");
+            }
+        } catch (error) {
+            console.error("Erro na busca de CEP:", error);
+            toast.error("Erro ao buscar CEP");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -296,25 +351,35 @@ export default function Configuracoes() {
                 </Accordion>
 
                 <Accordion title="📍 Endereço e Localização">
-                    <p style={{ fontSize: 13, color: '#8b8685', marginBottom: 12 }}>Navegue pelo mapa e clique exatamente onde seu estabelecimento fica para salvar a posição e endereço do local.</p>
+                    <p style={{ fontSize: 13, color: '#8b8685', marginBottom: 16 }}>Busque pelo CEP ou digite o endereço manualmente. Você também pode clicar no mapa para ajustar.</p>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, marginBottom: 16, maxWidth: 400 }}>
+                        <Input
+                            label="CEP"
+                            placeholder="00000-000"
+                            value={cep}
+                            onChange={e => setCep(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), handleCepSearch())}
+                        />
+                        <div style={{ display: 'flex', alignItems: 'flex-end', paddingBottom: 4 }}>
+                            <Button type="button" onClick={handleCepSearch}><FiSearch /></Button>
+                        </div>
+                    </div>
+
                     <div style={{ flex: 1, marginBottom: 16 }}>
                         <Input
-                            label="Endereço (Definido pelo Mapa)"
-                            placeholder="Toque no mapa abaixo..."
+                            label="Endereço Completo"
+                            placeholder="Rua, Número, Bairro, Cidade..."
                             value={config.enderecoEstabelecimento}
-                            readOnly
-                            disabled
-                            style={{ opacity: 0.8, cursor: 'not-allowed' }}
+                            onChange={e => setConfig({ ...config, enderecoEstabelecimento: e.target.value })}
+                            onKeyDown={e => e.key === 'Enter' && e.preventDefault()}
                         />
                     </div>
 
                     <MapContainer>
                         <Map
-                            initialViewState={{
-                                longitude: config.coordenadas.lng,
-                                latitude: config.coordenadas.lat,
-                                zoom: 14
-                            }}
+                            {...mapViewState}
+                            onMove={evt => setMapViewState(evt.viewState)}
                             mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
                             onClick={handleMapClick}
                             cursor="pointer"

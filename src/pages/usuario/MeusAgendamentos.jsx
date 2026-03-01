@@ -71,7 +71,10 @@ export default function MeusAgendamentos() {
     const [canceling, setCanceling] = useState(null);
 
     const fetchMeusAgendamentos = async () => {
-        if (!user) return;
+        if (!user) {
+            setLoading(false);
+            return;
+        }
         try {
             // Removemos o orderBy('data', 'desc') do Firestore para evitar erro de falta de índice composto. 
             // Faremos a ordenação localmente após buscar os dados.

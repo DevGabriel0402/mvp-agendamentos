@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import styled from 'styled-components';
 import { collection, query, where, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
@@ -82,9 +83,10 @@ const InfoRow = styled.div`
 
 export default function Atendimentos() {
     const { empresa } = useAuth();
+    const location = useLocation();
     const [atendimentos, setAtendimentos] = useState([]);
     const [filtro, setFiltro] = useState('todos');
-    const [dataFiltro, setDataFiltro] = useState('');
+    const [dataFiltro, setDataFiltro] = useState(location.state?.data || '');
     const [loading, setLoading] = useState(true);
 
     const filterOptions = [

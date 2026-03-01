@@ -14,3 +14,8 @@ export const maskPhone = (value) => {
     }
     return value;
 };
+
+export const cleanPhone = (value) => {
+    if (!value) return '';
+    return value.replace(/\D/g, '');
+};

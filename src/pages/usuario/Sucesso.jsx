@@ -6,6 +6,8 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import toast from 'react-hot-toast';
 import { useConfiguracoes } from '../../hooks/useConfiguracoes';
+import { useTenant } from '../../hooks/useTenant';
+import { cleanPhone } from '../../utils/formatters';
 
 const Container = styled.div`
   display: flex;
@@ -88,7 +90,8 @@ const WarningBox = styled.div`
 export default function Sucesso() {
   const { state } = useLocation();
   const navigate = useNavigate();
-  const { config } = useConfiguracoes();
+  const { tenant } = useTenant();
+  const { config } = useConfiguracoes(tenant);
 
   if (!state || !state.data) {
     return <Navigate to="../home" replace />;
@@ -105,7 +108,12 @@ export default function Sucesso() {
     const dataAgendada = format(new Date(data), "dd/MM/yyyy");
 
     // Puxa do FireStore via admin conf, se n tiver usa 5511000000000 como demonstração
-    const numeroSalao = config?.whatsapp || "5511000000000";
+    let numeroSalao = cleanPhone(config?.whatsapp || "5511000000000");
+
+    // Adiciona o DDI 55 se não tiver e for brasileiro (10 ou 11 dígitos)
+    if (numeroSalao.length === 10 || numeroSalao.length === 11) {
+      numeroSalao = `55${numeroSalao}`;
+    }
 
     const mensagem = `${saudacao}! Fui agendado através do Sistema Online.\n\n` +
       `💇‍♀️ *Serviço:* ${servico}\n` +
