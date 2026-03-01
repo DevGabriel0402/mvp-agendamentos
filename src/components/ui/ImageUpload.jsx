@@ -8,8 +8,8 @@ import toast from 'react-hot-toast';
 const UploadArea = styled.div`
   width: 100%;
   height: 160px;
-  border: 2px dashed ${({ theme, dragActive }) => dragActive ? theme.colors.primary : theme.colors.border};
-  background-color: ${({ theme, dragActive }) => dragActive ? 'rgba(221, 167, 165, 0.05)' : theme.colors.background};
+  border: 2px dashed ${({ theme, $dragActive }) => $dragActive ? theme.colors.primary : theme.colors.border};
+  background-color: ${({ theme, $dragActive }) => $dragActive ? 'rgba(221, 167, 165, 0.05)' : theme.colors.background};
   border-radius: ${({ theme }) => theme.radii.md};
   display: flex;
   flex-direction: column;
@@ -157,7 +157,7 @@ export function ImageUpload({ onUploadComplete, initialImage = '' }) {
     return (
         <div>
             <UploadArea
-                dragActive={dragActive}
+                $dragActive={dragActive}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}

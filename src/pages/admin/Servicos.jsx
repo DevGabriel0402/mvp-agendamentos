@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { collection, query, getDocs, orderBy, deleteDoc, doc, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, deleteDoc, doc, addDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../hooks/useAuth';
 import { FiPlus, FiImage, FiTrash2, FiEdit, FiGrid, FiList, FiClock } from 'react-icons/fi';
@@ -149,28 +149,7 @@ const ServiceCard = styled.div`
 
 const ViewToggle = styled.div`
   display: flex;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.md};
-  overflow: hidden;
-
-  button {
-    padding: 8px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    transition: all 0.2s;
-
-    &.active {
-      background: rgba(221, 167, 165, 0.1);
-      color: ${({ theme }) => theme.colors.primary};
-    }
-
-    &:hover:not(.active) {
-      background: ${({ theme }) => theme.colors.background};
-    }
-  }
+  gap: 8px;
 `;
 
 const ServiceInfo = styled.div`
@@ -247,17 +226,24 @@ export default function Servicos() {
     });
 
     const fetchServicos = async () => {
-        if (!empresa?.id) return;
+        if (!empresa?.id) {
+            setLoading(false);
+            return;
+        }
 
         try {
             setLoading(true);
             const q = query(
                 collection(db, 'servicos'),
-                where('empresaId', '==', empresa.id),
-                orderBy('createdAt', 'desc')
+                where('empresaId', '==', empresa.id)
             );
             const snap = await getDocs(q);
-            setServicos(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+            const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Ordenação local para evitar necessidade de índice composto no Firestore
+            data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+            setServicos(data);
         } catch (error) {
             console.error(error);
         } finally {
@@ -314,10 +300,13 @@ export default function Servicos() {
             };
 
             if (servicoEmEdicao) {
-                // Atualizar existente
-                await updateDoc(doc(db, 'servicos', servicoEmEdicao), dadosSalvar);
+                // Atualizar existente - Garantir que empresaId permaneça
+                await updateDoc(doc(db, 'servicos', servicoEmEdicao), {
+                    ...dadosSalvar,
+                    empresaId: empresa.id
+                });
             } else {
-                // Criar novo
+                // Criar novo vinculado à empresa
                 await addDoc(collection(db, 'servicos'), {
                     ...dadosSalvar,
                     empresaId: empresa.id,
@@ -347,22 +336,24 @@ export default function Servicos() {
                 <h1>Serviços e Tratamentos</h1>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                     <ViewToggle>
-                        <button
-                            className={viewMode === 'list' ? 'active' : ''}
+                        <Button
+                            $variant={viewMode === 'list' ? 'primary' : 'outline'}
+                            size="small"
                             onClick={() => setViewMode('list')}
                             title="Ver em Lista"
-                            type="button"
+                            style={{ padding: '8px' }}
                         >
                             <FiList size={20} />
-                        </button>
-                        <button
-                            className={viewMode === 'grid' ? 'active' : ''}
+                        </Button>
+                        <Button
+                            $variant={viewMode === 'grid' ? 'primary' : 'outline'}
+                            size="small"
                             onClick={() => setViewMode('grid')}
                             title="Ver em Cards"
-                            type="button"
+                            style={{ padding: '8px' }}
                         >
                             <FiGrid size={20} />
-                        </button>
+                        </Button>
                     </ViewToggle>
                     <Button onClick={handleNovoServico}>
                         <FiPlus /> Novo Serviço

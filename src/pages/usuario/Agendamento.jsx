@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { doc, getDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../hooks/useAuth';
+import { useTenant } from '../../hooks/useTenant';
 import { useConfiguracoes } from '../../hooks/useConfiguracoes';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -104,7 +105,7 @@ const DateBox = styled.button`
   height: 80px;
   border-radius: ${({ theme }) => theme.radii.md};
   border: 2px solid ${({ theme, selected }) => selected ? theme.colors.primary : theme.colors.border};
-  background: ${({ theme, selected }) => selected ? 'rgba(221, 167, 165, 0.1)' : theme.colors.surface};
+  background: ${({ theme, selected }) => selected ? `${theme.colors.primary}1A` : theme.colors.surface};
   color: ${({ theme, selected }) => selected ? theme.colors.primary : theme.colors.textPrimary};
   
   span:first-child { font-size: ${({ theme }) => theme.typography.sizes.sm}; text-transform: capitalize; }
@@ -142,7 +143,8 @@ export default function Agendamento() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { config } = useConfiguracoes();
+    const { tenant, loading: loadingTenant } = useTenant();
+    const { config } = useConfiguracoes(tenant);
 
     const [servico, setServico] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -160,9 +162,13 @@ export default function Agendamento() {
 
     // Auto-preencher caso já tenha agendado antes
     useEffect(() => {
-        const cached = localStorage.getItem('mvp_cliente_data');
-        if (cached) {
-            setClienteData(JSON.parse(cached));
+        try {
+            const cached = localStorage.getItem('mvp_cliente_data');
+            if (cached) {
+                setClienteData(prev => ({ ...prev, ...JSON.parse(cached) }));
+            }
+        } catch (e) {
+            console.error("Erro ao ler cache:", e);
         }
     }, []);
 
@@ -178,7 +184,7 @@ export default function Agendamento() {
                     setServico({ id: docSnap.id, ...docSnap.data() });
                 } else {
                     toast.error("Serviço não encontrado");
-                    navigate('/home');
+                    navigate('../home');
                 }
             } catch (err) {
                 console.error(err);
@@ -191,13 +197,13 @@ export default function Agendamento() {
 
     // Buscar os agendamentos já ocupados na data selecionada
     useEffect(() => {
-        if (!dataSelecionada) return;
+        if (!tenant?.id || !dataSelecionada) return;
 
         const fetchOcupados = async () => {
             const q = query(
                 collection(db, 'agendamentos'),
+                where('empresaId', '==', tenant.id),
                 where('data', '==', format(dataSelecionada, 'yyyy-MM-dd')),
-                // Considerando que status cancelado libera o horário, mas agendado/concluido ocupa
                 where('status', 'in', ['agendado', 'concluido'])
             );
             const snap = await getDocs(q);
@@ -205,7 +211,7 @@ export default function Agendamento() {
             setAgendamentosOcupados(times);
         };
         fetchOcupados();
-    }, [dataSelecionada]);
+    }, [dataSelecionada, tenant?.id]);
 
     // Gera array com os próximos 14 dias
     const proxdias = Array.from({ length: 14 }).map((_, i) => addDays(new Date(), i));
@@ -225,9 +231,10 @@ export default function Agendamento() {
             if (!clienteSnap.empty) {
                 clienteId = clienteSnap.docs[0].id;
             } else {
-                // Criar cliente
+                // Criar cliente vinculado à empresa
                 const novoClienteRef = await addDoc(collection(db, 'clientes'), {
                     ...clienteData,
+                    empresaId: tenant.id,
                     userId: user.uid,
                     createdAt: serverTimestamp()
                 });
@@ -236,6 +243,7 @@ export default function Agendamento() {
 
             // 2. Criar Agendamento (Agora com Contato Explícito no topo do Payload)
             const payloadAgendamento = {
+                empresaId: tenant.id,
                 contato: clienteData.contato, // Adicionado para aparecer no painel Admin sem depender só da collection cliente
                 clienteId,
                 servicoId: servico.id,
@@ -256,7 +264,7 @@ export default function Agendamento() {
             localStorage.setItem('mvp_cliente_data', JSON.stringify(clienteData));
 
             // Sucesso
-            navigate('/sucesso', { replace: true, state: { data: dataSelecionada, horario: horarioSelecionado, servico: servico.nome } });
+            navigate('../sucesso', { replace: true, state: { data: dataSelecionada, horario: horarioSelecionado, servico: servico.nome } });
         } catch (err) {
             console.error(err);
             toast.error("Erro ao finalizar agendamento.");
@@ -265,7 +273,7 @@ export default function Agendamento() {
         }
     };
 
-    if (loading || !servico) return <Loader text="Carregando..." fullHeight />;
+    if (loading || loadingTenant || !servico || !tenant) return <Loader text="Carregando..." fullHeight />;
 
     return (
         <Page>
@@ -328,49 +336,50 @@ export default function Agendamento() {
                     </SectionBox>
                 )}
 
-                {/* Dados Pessoais */}
-                {horarioSelecionado && (
-                    <SectionBox>
-                        <h3><FiCheckCircle /> Seus Dados</h3>
-                        <FormGrid>
-                            <Input
-                                label="Nome Completo *"
-                                placeholder="Ex: Maria Alice"
-                                value={clienteData.nome}
-                                onChange={e => setClienteData({ ...clienteData, nome: e.target.value })}
-                            />
-                            <Input
-                                label="Telefone / WhatsApp *"
-                                placeholder="(00) 00000-0000"
-                                value={clienteData.contato}
-                                onChange={e => setClienteData({ ...clienteData, contato: maskPhone(e.target.value) })}
-                            />
-                            <Input
-                                label="Endereço (Opcional)"
-                                placeholder="Seu endereço..."
-                                value={clienteData.endereco}
-                                onChange={e => setClienteData({ ...clienteData, endereco: e.target.value })}
-                            />
-                            <Select
-                                label="Forma de Pagamento Base"
-                                value={clienteData.formaPagamento}
-                                onChange={e => setClienteData({ ...clienteData, formaPagamento: e.target.value })}
-                                options={[
-                                    { value: 'Pix', label: 'Pix no local' },
-                                    { value: 'Cartão', label: 'Cartão via Maquininha' },
-                                    { value: 'Dinheiro', label: 'Dinheiro' }
-                                ]}
-                            />
-                        </FormGrid>
-                    </SectionBox>
-                )}
+                {/* Dados Pessoais (Sempre visível se tiver serviço para melhorar UX) */}
+                <SectionBox>
+                    <h3><FiCheckCircle /> Seus Dados</h3>
+                    <FormGrid>
+                        <Input
+                            label="Nome Completo *"
+                            placeholder="Ex: Maria Alice"
+                            value={clienteData.nome}
+                            onChange={e => setClienteData({ ...clienteData, nome: e.target.value })}
+                        />
+                        <Input
+                            label="Telefone / WhatsApp *"
+                            placeholder="(00) 00000-0000"
+                            value={clienteData.contato}
+                            onChange={e => setClienteData({ ...clienteData, contato: maskPhone(e.target.value) })}
+                        />
+                        <Input
+                            label="Endereço (Opcional)"
+                            placeholder="Seu endereço..."
+                            value={clienteData.endereco}
+                            onChange={e => setClienteData({ ...clienteData, endereco: e.target.value })}
+                        />
+                        <Select
+                            label="Forma de Pagamento Base"
+                            value={clienteData.formaPagamento}
+                            onChange={e => setClienteData({ ...clienteData, formaPagamento: e.target.value })}
+                            options={[
+                                { value: 'Pix', label: 'Pix no local' },
+                                { value: 'Cartão', label: 'Cartão via Maquininha' },
+                                { value: 'Dinheiro', label: 'Dinheiro' }
+                            ]}
+                        />
+                    </FormGrid>
+                    {!horarioSelecionado && (
+                        <p style={{ fontSize: 12, color: '#8b8685', marginTop: 16 }}>* Escolha uma data e horário acima para habilitar a confirmação.</p>
+                    )}
+                </SectionBox>
 
             </Content>
 
             {/* Rodapé Fixo */}
             {horarioSelecionado && (
                 <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: 16, background: '#fff', boxShadow: '0 -4px 10px rgba(0,0,0,0.05)' }}>
-                    <Button fullWidth size="large" onClick={handleFinalizar} disabled={submitting}>
+                    <Button $fullWidth $size="large" onClick={handleFinalizar} disabled={submitting}>
                         {submitting ? 'Aguarde...' : 'Confirmar Agendamento'}
                     </Button>
                 </div>

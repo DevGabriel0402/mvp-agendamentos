@@ -2,8 +2,8 @@ export const theme = {
     colors: {
         background: '#FAFAF8',
         surface: '#FFFFFF',
-        primary: '#DDA7A5',     // Rosa velho / Nude rosado elegante
-        primaryDark: '#C88D8E', // Hover
+        primary: '#3B82F6',     // Azul Clean Moderno
+        primaryDark: '#2563EB', // Hover azul mais escuro
         textPrimary: '#2D2A26',
         textSecondary: '#8B8685',
         border: '#EBE6E4',

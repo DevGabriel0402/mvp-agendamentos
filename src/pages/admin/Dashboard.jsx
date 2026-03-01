@@ -8,6 +8,7 @@ import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell
 } from 'recharts';
+import { Loader } from '../../components/ui/Loader';
 
 const Title = styled.h1`
   font-size: ${({ theme }) => theme.typography.sizes.title};
@@ -40,7 +41,10 @@ const StatCard = styled.div`
     
     svg {
       font-size: 24px;
-      color: ${({ theme, $colorMode }) => theme.colors[$colorMode] || theme.colors.primary};
+      color: ${({ theme, $colorMode }) =>
+        $colorMode === 'primary' ? theme.colors.primary :
+            (theme.colors[$colorMode] || theme.colors.primary)
+    };
       opacity: 0.8;
     }
   }
@@ -75,7 +79,7 @@ const ChartBox = styled.div`
   }
 `;
 
-const COLORS = ['#10B981', '#F59E0B', '#EF4444', '#DDA7A5'];
+const COLORS = ['#10B981', '#F59E0B', '#EF4444', ({ theme }) => theme.colors.primary];
 
 export default function Dashboard() {
     const { empresa } = useAuth();
@@ -91,12 +95,12 @@ export default function Dashboard() {
         barData: [],
         pieData: []
     });
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         // Buscar contagem real do Firebase
         const fetchStats = async () => {
             if (!empresa?.id) return;
-
             try {
                 const clientesQuery = query(collection(db, 'clientes'), where('empresaId', '==', empresa.id));
                 const agendamentosQuery = query(collection(db, 'agendamentos'), where('empresaId', '==', empresa.id));
@@ -172,8 +176,11 @@ export default function Dashboard() {
                 console.error(err);
             }
         };
-        fetchStats();
+        if (empresa?.id) fetchStats().finally(() => setLoading(false));
+        else setLoading(false);
     }, [empresa?.id]);
+
+    if (loading) return <Loader text="Carregando estatísticas..." fullHeight />;
 
     return (
         <div>
@@ -204,13 +211,13 @@ export default function Dashboard() {
                     <div className="value">{stats.concluidos}</div>
                 </StatCard>
 
-                {/* <StatCard $colorMode="primaryDark">
+                <StatCard $colorMode="primaryDark">
                     <div className="header">
                         <span>Clientes Cadastrados</span>
                         <FiUsers />
                     </div>
                     <div className="value">{stats.totalClientes}</div>
-                </StatCard> */}
+                </StatCard>
 
                 <StatCard $colorMode="success">
                     <div className="header">
@@ -226,13 +233,13 @@ export default function Dashboard() {
             <ChartsGrid>
                 <ChartBox>
                     <h3>Agendamentos da Semana</h3>
-                    <div style={{ width: '100%', height: 300, minWidth: 0, minHeight: 0 }}>
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div style={{ width: '100%', height: 300 }}>
+                        <ResponsiveContainer width="100%" height={300}>
                             <BarChart data={chartData.barData}>
                                 <XAxis dataKey="name" stroke="#8B8685" fontSize={12} tickLine={false} axisLine={false} />
                                 <YAxis stroke="#8B8685" fontSize={12} tickLine={false} axisLine={false} />
                                 <Tooltip cursor={{ fill: '#f4f4f4' }} />
-                                <Bar dataKey="agendamentos" fill="#DDA7A5" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="agendamentos" fill={({ theme }) => theme.colors.primary} radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -240,8 +247,8 @@ export default function Dashboard() {
 
                 <ChartBox>
                     <h3>Formas de Pagamento</h3>
-                    <div style={{ width: '100%', height: 300, minWidth: 0, minHeight: 0, display: 'flex', justifyContent: 'center' }}>
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div style={{ width: '100%', height: 300, display: 'flex', justifyContent: 'center' }}>
+                        <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
                                 <Pie
                                     data={chartData.pieData}

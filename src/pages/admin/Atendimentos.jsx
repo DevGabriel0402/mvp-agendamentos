@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { collection, query, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../hooks/useAuth';
 import { FiCheck, FiX, FiCalendar, FiClock, FiUser, FiPhone, FiCreditCard } from 'react-icons/fi';
-import { Button } from '../../components/ui/Button';
-import { DatePicker } from '../../components/ui/DatePicker';
-import { Select } from '../../components/ui/Select';
 import { Loader } from '../../components/ui/Loader';
+import { Button } from '../../components/ui/Button';
+import { Input as DatePicker } from '../../components/ui/Input';
+import { Select } from '../../components/ui/Select';
+import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import toast from 'react-hot-toast';
 
 const PageHeader = styled.div`
   display: flex;
@@ -95,9 +95,12 @@ export default function Atendimentos() {
     ];
 
     const fetchAtendimentos = async () => {
-        try {
-            if (!empresa?.id) return;
+        if (!empresa?.id) {
+            setLoading(false);
+            return;
+        }
 
+        try {
             setLoading(true);
             const q = query(
                 collection(db, 'agendamentos'),
@@ -150,9 +153,9 @@ export default function Atendimentos() {
                     <div style={{ width: '180px' }}>
                         <DatePicker
                             label="Filtrar por data"
+                            type="date"
                             value={dataFiltro}
                             onChange={(e) => setDataFiltro(e.target.value)}
-                            placeholder="dd/mm/aaaa"
                         />
                     </div>
                     <div style={{ width: '220px' }}>
@@ -194,15 +197,15 @@ export default function Atendimentos() {
                                 {a.status === 'agendado' && (
                                     <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
                                         <Button
-                                            fullWidth
+                                            $fullWidth
                                             style={{ background: '#10B981', color: '#fff' }}
                                             onClick={() => handleStatusChange(a.id, 'concluido')}
                                         >
                                             <FiCheck /> Concluir
                                         </Button>
                                         <Button
-                                            fullWidth
-                                            variant="outline"
+                                            $fullWidth
+                                            $variant="outline"
                                             style={{ color: '#EF4444', borderColor: '#EF4444' }}
                                             onClick={(e) => {
                                                 e.preventDefault();

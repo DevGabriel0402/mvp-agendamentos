@@ -54,8 +54,8 @@ const AgendamentoCard = styled.div`
 `;
 
 const StatusBadge = styled.span`
-  background: ${({ theme, status }) => status === 'agendado' ? 'rgba(245, 158, 11, 0.1)' : status === 'concluido' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'};
-  color: ${({ theme, status }) => status === 'agendado' ? '#b45309' : status === 'concluido' ? '#047857' : '#b91c1c'};
+  background: ${({ theme, $status }) => $status === 'agendado' ? 'rgba(245, 158, 11, 0.1)' : $status === 'concluido' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)'};
+  color: ${({ theme, $status }) => $status === 'agendado' ? '#b45309' : $status === 'concluido' ? '#047857' : '#b91c1c'};
   padding: 4px 12px;
   border-radius: ${({ theme }) => theme.radii.full};
   font-size: 12px;
@@ -184,7 +184,7 @@ export default function MeusAgendamentos() {
                         <AgendamentoCard key={agen.id}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <strong style={{ fontSize: 18 }}>{agen.nomeServico}</strong>
-                                <StatusBadge status={agen.status}>{agen.status}</StatusBadge>
+                                <StatusBadge $status={agen.status}>{agen.status}</StatusBadge>
                             </div>
 
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, color: '#8b8685', fontSize: 14 }}>
@@ -199,8 +199,9 @@ export default function MeusAgendamentos() {
                             {agen.status === 'agendado' && (
                                 <div style={{ marginTop: 8 }}>
                                     <Button
-                                        variant="outline"
-                                        style={{ width: '100%', borderColor: '#ef4444', color: '#ef4444' }}
+                                        $variant="outline"
+                                        size="small"
+                                        style={{ color: '#ef4444', borderColor: '#ef4444' }}
                                         onClick={() => handleCancelar(agen.id)}
                                         disabled={canceling === agen.id}
                                     >

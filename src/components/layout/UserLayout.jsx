@@ -68,15 +68,15 @@ export default function UserLayout() {
       </ContentArea>
 
       <TabBarContainer>
-        <TabItem to="/home">
+        <TabItem to="home">
           <FiHome />
           <span>Agendar</span>
         </TabItem>
-        <TabItem to="/agendamentos">
+        <TabItem to="agendamentos">
           <FiCalendar />
           <span>Agendamentos</span>
         </TabItem>
-        <TabItem to="/favoritos">
+        <TabItem to="favoritos">
           <FiHeart />
           <span>Favoritos</span>
         </TabItem>

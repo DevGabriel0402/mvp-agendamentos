@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
+import { useAuth } from '../../hooks/useAuth';
 import { FiSave, FiMapPin, FiClock, FiCalendar, FiPlus, FiTrash2, FiSearch } from 'react-icons/fi';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -11,6 +12,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import toast from 'react-hot-toast';
 import { maskPhone } from '../../utils/formatters';
 import { Loader } from '../../components/ui/Loader';
+import { Accordion } from '../../components/ui/Accordion';
 
 const PageHeader = styled.div`
   display: flex;
@@ -65,11 +67,16 @@ const CheckboxLabel = styled.label`
   cursor: pointer;
   padding: 12px;
   border-radius: ${({ theme }) => theme.radii.sm};
-  border: 1px solid ${({ theme, checked }) => checked ? theme.colors.primary : theme.colors.border};
-  background: ${({ theme, checked }) => checked ? 'rgba(221, 167, 165, 0.1)' : 'transparent'};
+  border: 1px solid ${({ theme, $checked }) => $checked ? theme.colors.primary : theme.colors.border};
+  background: ${({ theme, $checked }) => $checked ? 'rgba(59, 130, 246, 0.1)' : 'transparent'};
   transition: all 0.2s;
   
   input { accent-color: ${({ theme }) => theme.colors.primary}; width: 18px; height: 18px; }
+  transition: all 0.2s;
+  
+  &:focus-within {
+    border-color: ${({ theme }) => theme.colors.primary};
+  }
 `;
 
 const HorariosWrapper = styled.div`
@@ -116,6 +123,7 @@ const DIAS_SEMANA = [
 ];
 
 export default function Configuracoes() {
+    const { empresa, setEmpresa } = useAuth();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [novoHorario, setNovoHorario] = useState('');
@@ -127,26 +135,27 @@ export default function Configuracoes() {
         horariosDisponiveis: ["08:00", "09:00", "10:00"],
         nomeApp: 'MVP Agendamento',
         whatsapp: '',
-        corTema: '#DDA7A5',
+        corTema: '#3B82F6',
         logoUrl: ''
     });
 
     useEffect(() => {
-        const fetchConfig = async () => {
-            try {
-                const docRef = doc(db, 'configuracoes', 'geral');
-                const docSnap = await getDoc(docRef);
-                if (docSnap.exists()) {
-                    setConfig(docSnap.data());
-                }
-            } catch (error) {
-                console.error("Erro ao buscar configurações", error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchConfig();
-    }, []);
+        if (empresa) {
+            setConfig({
+                enderecoEstabelecimento: empresa.enderecoEstabelecimento || '',
+                coordenadas: empresa.coordenadas || { lat: -23.55052, lng: -46.633308 },
+                diasFuncionamento: empresa.diasFuncionamento || [1, 2, 3, 4, 5, 6],
+                horariosDisponiveis: empresa.horariosDisponiveis || ["08:00", "09:00", "10:00"],
+                nomeApp: empresa.nome || '',
+                whatsapp: empresa.whatsapp || '',
+                corTema: empresa.corTema || '#3B82F6',
+                logoUrl: empresa.logoUrl || ''
+            });
+            setLoading(false);
+        } else {
+            setLoading(false);
+        }
+    }, [empresa]);
 
     const handleToggleDia = (diaId) => {
         setConfig(prev => {
@@ -183,9 +192,19 @@ export default function Configuracoes() {
 
     const handleSalvar = async (e) => {
         e.preventDefault();
+        if (!empresa?.id) return;
         setSaving(true);
         try {
-            await setDoc(doc(db, 'configuracoes', 'geral'), config);
+            // Salvar no documento da empresa
+            const dadosSalvar = {
+                ...config,
+                nome: config.nomeApp // Mantendo consistência com o campo 'nome' da empresa
+            };
+            await updateDoc(doc(db, 'empresas', empresa.id), dadosSalvar);
+
+            // Atualizar o contexto local para aplicar mudanças visuais imediatas (ex: cor tema)
+            setEmpresa(prev => ({ ...prev, ...dadosSalvar }));
+
             toast.success('Configurações salvas com sucesso!');
         } catch (error) {
             console.error(error);
@@ -216,6 +235,16 @@ export default function Configuracoes() {
 
     if (loading) return <Loader text="Carregando configurações..." fullHeight />;
 
+    if (!empresa) {
+        return (
+            <div style={{ padding: 40, textAlign: 'center' }}>
+                <h2>Seu perfil não está vinculado a uma empresa</h2>
+                <p>Verifique o Firestore (coleção 'administradores' {'->'} seu UID {'->'} campo 'empresaId').</p>
+                <Button onClick={() => window.location.reload()}>Tentar Novamente</Button>
+            </div>
+        );
+    }
+
     return (
         <div>
             <PageHeader>
@@ -224,9 +253,7 @@ export default function Configuracoes() {
 
             <FormContainer onSubmit={handleSalvar}>
 
-                {/* Endereço e Mapa */}
-                <SectionBox>
-                    <h3>✨ Identidade Visual (White-Label)</h3>
+                <Accordion title="✨ Identidade Visual (White-Label)" defaultOpen>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '24px' }}>
                         <div>
                             <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 500 }}>Logo do Sistema</label>
@@ -257,20 +284,18 @@ export default function Configuracoes() {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                     <input
                                         type="color"
-                                        value={config.corTema || '#DDA7A5'}
+                                        value={config.corTema || '#3B82F6'}
                                         onChange={e => setConfig({ ...config, corTema: e.target.value })}
                                         style={{ width: 48, height: 48, border: 'none', background: 'none', cursor: 'pointer', padding: 0 }}
                                     />
-                                    <span style={{ fontFamily: 'monospace', color: '#8b8685' }}>{config.corTema || '#DDA7A5'}</span>
+                                    <span style={{ fontFamily: 'monospace', color: '#8b8685' }}>{config.corTema || '#3B82F6'}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </SectionBox>
+                </Accordion>
 
-                {/* Endereço e Mapa */}
-                <SectionBox>
-                    <h3><FiMapPin /> Endereço e Localização</h3>
+                <Accordion title="📍 Endereço e Localização">
                     <p style={{ fontSize: 13, color: '#8b8685', marginBottom: 12 }}>Navegue pelo mapa e clique exatamente onde seu estabelecimento fica para salvar a posição e endereço do local.</p>
                     <div style={{ flex: 1, marginBottom: 16 }}>
                         <Input
@@ -294,18 +319,16 @@ export default function Configuracoes() {
                             onClick={handleMapClick}
                             cursor="pointer"
                         >
-                            <Marker longitude={config.coordenadas.lng} latitude={config.coordenadas.lat} color="#DDA7A5" />
+                            <Marker longitude={config.coordenadas.lng} latitude={config.coordenadas.lat} color="#3B82F6" />
                         </Map>
                     </MapContainer>
                     <p style={{ fontSize: 12, color: '#8b8685', marginTop: 8 }}>* Clique no mapa para ajustar o pin de localização.</p>
-                </SectionBox>
+                </Accordion>
 
-                {/* Dias de Funcionamento */}
-                <SectionBox>
-                    <h3><FiCalendar /> Dias de Funcionamento</h3>
+                <Accordion title="📅 Dias de Funcionamento">
                     <DiasGrid>
                         {DIAS_SEMANA.map(dia => (
-                            <CheckboxLabel key={dia.id} checked={config.diasFuncionamento.includes(dia.id)}>
+                            <CheckboxLabel key={dia.id} $checked={config.diasFuncionamento.includes(dia.id)}>
                                 <input
                                     type="checkbox"
                                     checked={config.diasFuncionamento.includes(dia.id)}
@@ -316,12 +339,9 @@ export default function Configuracoes() {
                             </CheckboxLabel>
                         ))}
                     </DiasGrid>
-                </SectionBox>
+                </Accordion>
 
-                {/* Horários */}
-                <SectionBox>
-                    <h3><FiClock /> Horários Disponíveis para Agendamento</h3>
-
+                <Accordion title="⏰ Horários Disponíveis">
                     <div style={{ display: 'flex', gap: 16, marginBottom: 24, maxWidth: 300 }}>
                         <Input
                             type="time"
@@ -346,9 +366,9 @@ export default function Configuracoes() {
                         ))}
                         {config.horariosDisponiveis.length === 0 && <span style={{ color: '#8b8685' }}>Nenhum horário adicionado.</span>}
                     </HorariosWrapper>
-                </SectionBox>
+                </Accordion>
 
-                <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: 40 }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', paddingBottom: 40, marginTop: 16 }}>
                     <Button size="large" type="submit" disabled={saving}>
                         <FiSave /> {saving ? 'Salvando...' : 'Salvar Configurações'}
                     </Button>

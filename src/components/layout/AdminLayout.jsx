@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import styled from 'styled-components';
-import { FiHome, FiUsers, FiCalendar, FiSettings, FiMenu, FiLogOut, FiEdit } from 'react-icons/fi';
+import { Outlet, NavLink, useNavigate, useParams } from 'react-router-dom';
+import styled, { useTheme } from 'styled-components';
+import { FiHome, FiUsers, FiCalendar, FiSettings, FiMenu, FiLogOut, FiEdit, FiExternalLink } from 'react-icons/fi';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../hooks/useAuth';
@@ -82,11 +82,12 @@ const StyledNavLink = styled(NavLink)`
 
   &:hover {
     background-color: ${({ theme }) => theme.colors.background};
-    color: ${({ theme }) => theme.colors.primaryDark};
+    color: ${({ theme }) => theme.colors.primary};
+    filter: brightness(0.9);
   }
 
   &.active {
-    background-color: rgba(221, 167, 165, 0.1);
+    background-color: ${({ theme }) => `${theme.colors.primary}1A`}; /* 1A = 10% opacidade */
     color: ${({ theme }) => theme.colors.primary};
   }
 `;
@@ -210,35 +211,24 @@ const MobileTabItem = styled(NavLink)`
 `;
 
 export default function AdminLayout() {
+  const { tenantSlug } = useParams();
   const [isOpen, setIsOpen] = useState(true);
   const [adminNome, setAdminNome] = useState('');
   const { logout, user } = useAuth();
   const navigate = useNavigate();
   const { config } = useConfiguracoes();
+  const theme = useTheme();
 
   useEffect(() => {
     const fetchAdminName = async () => {
-      if (user?.email) {
+      if (user?.uid) {
         try {
-          // Primeira tentativa: Buscar documento pelo email (caso o ID do doc seja gerado automaticamente)
-          const q = query(collection(db, 'administradores'), where('email', '==', user.email));
-          const querySnapshot = await getDocs(q);
-
-          if (!querySnapshot.empty) {
-            const adminData = querySnapshot.docs[0].data();
-            if (adminData.nome) {
-              setAdminNome(adminData.nome);
-              return;
-            }
-          }
-
-          // Segunda tentativa (Fallback original): Buscar documento onde o ID do doc é o próprio UID
-          if (user?.uid) {
-            const docRef = doc(db, 'administradores', user.uid);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists() && docSnap.data().nome) {
-              setAdminNome(docSnap.data().nome);
-            }
+          // Buscar nome diretamente pelo UID (ID do documento)
+          // Isso evita erros de "insufficient permissions" em queries complexas
+          const docRef = doc(db, 'administradores', user.uid);
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists() && docSnap.data().nome) {
+            setAdminNome(docSnap.data().nome);
           }
         } catch (error) {
           console.error("Erro ao buscar nome do admin:", error);
@@ -250,7 +240,7 @@ export default function AdminLayout() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/admin/login', { replace: true });
+    navigate('/entrada', { replace: true });
   };
 
   return (
@@ -264,19 +254,19 @@ export default function AdminLayout() {
         </SidebarHeader>
 
         <NavList>
-          <StyledNavLink to="/admin" end $isOpen={isOpen}>
+          <StyledNavLink to={`/${tenantSlug}/admin`} end $isOpen={isOpen}>
             <FiHome /> <span>Dashboard</span>
           </StyledNavLink>
-          <StyledNavLink to="/admin/servicos" $isOpen={isOpen}>
+          <StyledNavLink to={`/${tenantSlug}/admin/servicos`} $isOpen={isOpen}>
             <FiEdit /> <span>Serviços</span>
           </StyledNavLink>
-          <StyledNavLink to="/admin/atendimentos" $isOpen={isOpen}>
+          <StyledNavLink to={`/${tenantSlug}/admin/atendimentos`} $isOpen={isOpen}>
             <FiCalendar /> <span>Atendimentos</span>
           </StyledNavLink>
-          <StyledNavLink to="/admin/clientes" $isOpen={isOpen}>
+          <StyledNavLink to={`/${tenantSlug}/admin/clientes`} $isOpen={isOpen}>
             <FiUsers /> <span>Clientes</span>
           </StyledNavLink>
-          <StyledNavLink to="/admin/configuracoes" $isOpen={isOpen}>
+          <StyledNavLink to={`/${tenantSlug}/admin/configuracoes`} $isOpen={isOpen}>
             <FiSettings /> <span>Configurações</span>
           </StyledNavLink>
         </NavList>
@@ -294,15 +284,44 @@ export default function AdminLayout() {
             {config?.logoUrl ? (
               <img src={config.logoUrl} alt="Logo" style={{ width: 36, height: 36, borderRadius: '50%', objectFit: 'cover' }} />
             ) : (
-              <div style={{ width: 36, height: 36, borderRadius: '50%', background: '#DDA7A5', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+              <div style={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: config?.corTema || theme.colors.primary,
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: 'bold'
+              }}>
                 {config?.nomeApp ? config.nomeApp.charAt(0).toUpperCase() : 'A'}
               </div>
             )}
             <span style={{ fontWeight: 500 }}>{config?.nomeApp || 'Painel Admin'}</span>
           </div>
-          <MobileMenuBtn onClick={handleLogout} style={{ color: '#ef4444' }} title="Sair da Conta">
-            <FiLogOut />
-          </MobileMenuBtn>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+            <a
+              href={`/${tenantSlug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: theme.colors.primary,
+                textDecoration: 'none',
+                fontWeight: 600,
+                fontSize: '14px'
+              }}
+            >
+              <FiExternalLink /> Ver Agendamento
+            </a>
+            <MobileMenuBtn onClick={handleLogout} style={{ color: '#ef4444' }} title="Sair da Conta">
+              <FiLogOut />
+            </MobileMenuBtn>
+          </div>
         </Topbar>
         <PageScroll>
           <Outlet />
@@ -310,16 +329,16 @@ export default function AdminLayout() {
       </MainContent>
 
       <MobileTabBar>
-        <MobileTabItem to="/admin" end>
+        <MobileTabItem to={`/${tenantSlug}/admin`} end>
           <FiHome /> <span>Início</span>
         </MobileTabItem>
-        <MobileTabItem to="/admin/servicos">
+        <MobileTabItem to={`/${tenantSlug}/admin/servicos`}>
           <FiSettings /> <span>Serviços</span>
         </MobileTabItem>
-        <MobileTabItem to="/admin/atendimentos">
+        <MobileTabItem to={`/${tenantSlug}/admin/atendimentos`}>
           <FiCalendar /> <span>Agenda</span>
         </MobileTabItem>
-        <MobileTabItem to="/admin/clientes">
+        <MobileTabItem to={`/${tenantSlug}/admin/clientes`}>
           <FiUsers /> <span>Clientes</span>
         </MobileTabItem>
       </MobileTabBar>

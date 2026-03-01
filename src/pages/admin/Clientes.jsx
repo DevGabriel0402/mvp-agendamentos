@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import { collection, query, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useAuth } from '../../hooks/useAuth';
 import { FiSearch, FiPhone, FiMapPin } from 'react-icons/fi';
@@ -94,16 +94,22 @@ export default function Clientes() {
 
     useEffect(() => {
         const fetchClientes = async () => {
-            if (!empresa?.id) return;
+            if (!empresa?.id) {
+                setLoading(false);
+                return;
+            }
 
             try {
                 const q = query(
                     collection(db, 'clientes'),
-                    where('empresaId', '==', empresa.id),
-                    orderBy('createdAt', 'desc')
+                    where('empresaId', '==', empresa.id)
                 );
                 const snap = await getDocs(q);
-                const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                let data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                // Ordenação local para evitar necessidade de índices compostos
+                data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
                 setClientes(data);
             } catch (err) {
                 console.error(err);

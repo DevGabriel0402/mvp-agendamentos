@@ -91,7 +91,7 @@ export default function Sucesso() {
   const { config } = useConfiguracoes();
 
   if (!state || !state.data) {
-    return <Navigate to="/home" replace />;
+    return <Navigate to="../home" replace />;
   }
 
   const { data, horario, servico, nomeCliente } = state; // Asumindo que passamos o nome do cliente no agendamento
@@ -141,11 +141,11 @@ export default function Sucesso() {
       </WarningBox>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', maxWidth: 400 }}>
-        <Button size="large" fullWidth onClick={handleWhatsApp} style={{ backgroundColor: '#25D366', color: 'white' }}>
+        <Button $size="large" $fullWidth onClick={handleWhatsApp} style={{ backgroundColor: '#25D366', color: 'white' }}>
           Confirmar no WhatsApp
         </Button>
 
-        <Button size="large" variant="ghost" fullWidth onClick={() => navigate('/home', { replace: true })}>
+        <Button $size="large" $variant="ghost" $fullWidth onClick={() => navigate('../home', { replace: true })}>
           <FiHome /> Voltar para o Início
         </Button>
       </div>

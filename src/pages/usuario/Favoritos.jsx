@@ -125,7 +125,7 @@ export default function Favoritos() {
                             <button onClick={() => toggleFavorito(servico.id)} style={{ color: '#ef4444' }}>
                                 <FiHeart size={24} fill="#ef4444" />
                             </button>
-                            <Button size="small" onClick={() => navigate(`/agendar/${servico.id}`)}>
+                            <Button size="small" onClick={() => navigate(`../agendar/${servico.id}`)}>
                                 Agendar
                             </Button>
                         </div>

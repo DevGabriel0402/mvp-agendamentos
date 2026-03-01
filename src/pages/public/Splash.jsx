@@ -36,9 +36,16 @@ export default function Splash() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Redireciona para /entrada após 2.5s
+    // Tenta obter o último tenant visitado do localStorage
+    const ultimoTenant = localStorage.getItem('mvp_ultimo_tenant');
+
     const timer = setTimeout(() => {
-      navigate('/entrada', { replace: true });
+      if (ultimoTenant) {
+        navigate(`/${ultimoTenant}`, { replace: true });
+      } else {
+        // Se não houver, vai para a entrada genérica (que levará ao login por enquanto)
+        navigate('/entrada', { replace: true });
+      }
     }, 2500);
     return () => clearTimeout(timer);
   }, [navigate]);

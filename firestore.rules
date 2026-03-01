@@ -2,56 +2,64 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Função auxiliar: verificar se usuário está logado
+    // Funções auxiliares
     function isLogado() {
       return request.auth != null;
     }
+
+    // Pega os dados do administrador logado com segurança
+    function getAdminData() {
+      let userPath = /databases/$(database)/documents/administradores/$(request.auth.uid);
+      return exists(userPath) ? get(userPath).data : null;
+    }
     
-    // Função auxiliar: verificar se usuário logado NÃO é anônimo (logo, é admin através de email/senha)
-    // No Firebase Auth, provedores de email/senha têm 'password' no provider
-    function isAdmin() {
-      return isLogado() && request.auth.token.firebase.sign_in_provider != 'anonymous';
-    }
-
-    // COLEÇÃO: servicos (Leitura pública/anônima, escrita apenas Admin)
-    match /servicos/{docId} {
+    // COLEÇÃO: empresas (Leitura pública, escrita Master ou Admin da própria empresa)
+    match /empresas/{empresaId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isLogado() && getAdminData() != null && (
+        getAdminData().permissoes == 'master' || 
+        getAdminData().empresaId == empresaId || 
+        getAdminData().empresaId == resource.data.slug
+      );
     }
 
-    // COLEÇÃO: configuracoes (Leitura pública/anônima, escrita apenas Admin)
-    match /configuracoes/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
+    // COLEÇÃO: administradores (Usuário só lê/escreve o seu próprio perfil pelo UID)
+    match /administradores/{uid} {
+      allow read, write: if isLogado() && request.auth.uid == uid;
+      allow list: if isLogado() && getAdminData() != null && (getAdminData().permissoes == 'master');
     }
 
-    // COLEÇÃO: clientes
-    match /clientes/{docId} {
-      // Admin pode tudo
-      allow read, write: if isAdmin();
-      // Anônimo pode criar cliente para si, ou ler se souber o ID exato (fluxo de agendamento)
-      allow create: if isLogado();
-      allow read: if isLogado();
+    // COLEÇÃO: agendamentos (Clientes leem ocupação e criam, Admin gerencia tudo)
+    match /agendamentos/{id} {
+      allow read: if true; // Aberto para consulta de disponibilidade
+      allow create: if true; // Aberto para clientes agendarem
+      allow update, delete: if isLogado() && (
+        (getAdminData() != null && (getAdminData().permissoes == 'master' || resource.data.empresaId == getAdminData().empresaId)) ||
+        (!('empresaId' in resource.data) || resource.data.empresaId == null) ||
+        (resource.data.userId == request.auth.uid)
+      );
     }
 
-    // COLEÇÃO: agendamentos
-    match /agendamentos/{docId} {
-      allow read, write: if isAdmin();
-      // Anônimo pode criar, e pode ler seus próprios agendamentos (opcional, aqui permitimos criacao)
-      allow create: if isLogado();
-      allow read: if isLogado();
+    // COLEÇÃO: clientes (Clientes podem ser criados, Admin gerencia lista)
+    match /clientes/{id} {
+      allow read: if true; // Facilitar consulta de cliente pelo CPF/Contato no agendamento
+      allow create: if true; // Clientes novos podem ser cadastrados no agendamento
+      allow update, delete: if isLogado() && (
+        (getAdminData() != null && (getAdminData().permissoes == 'master' || resource.data.empresaId == getAdminData().empresaId)) ||
+        (!('empresaId' in resource.data) || resource.data.empresaId == null)
+      );
     }
 
-    // COLEÇÃO: administradores
-    match /administradores/{docId} {
-      allow read, write: if isAdmin();
-    }
-
-    // COLEÇÃO: feedbacks
-    match /feedbacks/{docId} {
-      allow read, write: if isAdmin();
-      allow create: if isLogado();
-      allow read: if true; // Feedbacks podem ser lidos publicamente para exibir avaliações
+    // REGRAS PARA OUTROS DADOS (servicos, feedbacks, configuracoes)
+    match /{colecao}/{docId} {
+      allow read: if true; 
+      
+      allow write: if isLogado() && (
+        (getAdminData() != null && getAdminData().permissoes == 'master') ||
+        (getAdminData() != null && resource != null && resource.data.empresaId == getAdminData().empresaId) ||
+        (resource == null) ||
+        (!('empresaId' in resource.data) || resource.data.empresaId == null)
+      );
     }
   }
 }

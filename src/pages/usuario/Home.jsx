@@ -5,6 +5,7 @@ import { FiLogOut, FiCalendar, FiGrid, FiList } from 'react-icons/fi';
 import { Button } from '../../components/ui/Button';
 import { Loader } from '../../components/ui/Loader';
 import { useAuth } from '../../hooks/useAuth';
+import { useTenant } from '../../hooks/useTenant';
 import { useServicos } from '../../hooks/useServicos';
 import { ServiceCard } from '../../components/cards/ServiceCard';
 
@@ -81,24 +82,7 @@ const SectionHeader = styled.div`
 
 const ViewToggle = styled.div`
   display: flex;
-  background: ${({ theme }) => theme.colors.surface};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: ${({ theme }) => theme.radii.md};
-  overflow: hidden;
-
-  button {
-    padding: 8px 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: ${({ theme }) => theme.colors.textSecondary};
-    transition: all 0.2s;
-
-    &.active {
-      background: rgba(221, 167, 165, 0.1);
-      color: ${({ theme }) => theme.colors.primary};
-    }
-  }
+  gap: 8px;
 `;
 
 const ListServicos = styled.div`
@@ -118,7 +102,8 @@ const EmptyState = styled.div`
 
 export default function Home() {
   const { user, logout } = useAuth();
-  const { servicos, loading } = useServicos();
+  const { tenant, loading: loadingTenant, error: tenantError } = useTenant();
+  const { servicos, loading: loadingServicos } = useServicos(tenant?.id);
   const navigate = useNavigate();
 
   const [favoritos, setFavoritos] = useState([]);
@@ -136,8 +121,8 @@ export default function Home() {
   }, []);
 
   const handleAgendar = (servico) => {
-    // Redireciona para tela de Agendamento passando o servico por ID
-    navigate(`/agendar/${servico.id}`);
+    // Redireciona para tela de Agendamento usando caminho relativo para manter o slug
+    navigate(`../agendar/${servico.id}`);
   };
 
   const handleFavoritar = (id) => {
@@ -153,8 +138,11 @@ export default function Home() {
 
   const handleSair = async () => {
     await logout();
-    navigate('/entrada', { replace: true });
+    navigate(`/${tenant.slug}`, { replace: true });
   };
+
+  if (loadingTenant) return <Loader text="Carregando empresa..." fullHeight />;
+  if (tenantError || !tenant) return <EmptyState><p>{tenantError || "Empresa não encontrada"}</p></EmptyState>;
 
   return (
     <PageContainer>
@@ -163,9 +151,9 @@ export default function Home() {
           {clienteCache ? (
             <h2>Bem-vindo de volta, {clienteCache.nome.split(' ')[0]}! 👋</h2>
           ) : (
-            <h2>Olá, {user?.displayName || 'Visitante'} 👋</h2>
+            <h2>{tenant.nome} 👋</h2>
           )}
-          <p>O que vamos agendar hoje?</p>
+          <p>Escolha um serviço abaixo:</p>
         </Greeting>
         <HeaderActions>
           <button onClick={handleSair} title="Sair do aplicativo">
@@ -179,24 +167,26 @@ export default function Home() {
           <SectionHeader>
             <SectionTitle style={{ marginBottom: 0 }}>Serviços Disponíveis</SectionTitle>
             <ViewToggle>
-              <button
-                className={viewMode === 'grid' ? 'active' : ''}
+              <Button
+                $variant={viewMode === 'grid' ? 'primary' : 'outline'}
+                size="small"
                 onClick={() => setViewMode('grid')}
-                title="Ver em Cards"
+                style={{ padding: '8px' }}
               >
                 <FiGrid size={18} />
-              </button>
-              <button
-                className={viewMode === 'list' ? 'active' : ''}
+              </Button>
+              <Button
+                $variant={viewMode === 'list' ? 'primary' : 'outline'}
+                size="small"
                 onClick={() => setViewMode('list')}
-                title="Ver em Lista"
+                style={{ padding: '8px' }}
               >
                 <FiList size={18} />
-              </button>
+              </Button>
             </ViewToggle>
           </SectionHeader>
 
-          {loading ? (
+          {loadingServicos ? (
             <Loader text="Carregando serviços..." />
           ) : servicos.length === 0 ? (
             <EmptyState>

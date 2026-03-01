@@ -9,8 +9,8 @@ const CardContainer = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.border};
   overflow: hidden;
   display: flex;
-  flex-direction: ${({ variant }) => variant === 'list' ? 'row' : 'column'};
-  height: ${({ variant }) => variant === 'list' ? '120px' : 'auto'};
+  flex-direction: ${({ $variant }) => $variant === 'list' ? 'row' : 'column'};
+  height: ${({ $variant }) => $variant === 'list' ? '120px' : 'auto'};
   transition: transform 0.2s, box-shadow 0.2s;
 
   &:hover {
@@ -20,11 +20,11 @@ const CardContainer = styled.div`
 `;
 
 const ImageArea = styled.div`
-  width: ${({ variant }) => variant === 'list' ? '120px' : '100%'};
-  height: ${({ variant }) => variant === 'list' ? '120px' : '160px'};
+  width: ${({ $variant }) => $variant === 'list' ? '120px' : '100%'};
+  height: ${({ $variant }) => $variant === 'list' ? '120px' : '160px'};
   flex-shrink: 0;
   background-color: ${({ theme }) => theme.colors.border};
-  background-image: url(${({ bgImage }) => bgImage || ''});
+  background-image: url(${({ $bgImage }) => $bgImage || ''});
   background-size: cover;
   background-position: center;
   position: relative;
@@ -41,20 +41,20 @@ const FavoriteBtn = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  color: ${({ theme, active }) => active ? theme.colors.error : theme.colors.textSecondary};
+  color: ${({ theme, $active }) => $active ? theme.colors.error : theme.colors.textSecondary};
   box-shadow: ${({ theme }) => theme.shadows.sm};
   
   svg {
-    fill: ${({ active }) => active ? 'currentColor' : 'none'};
+    fill: ${({ $active }) => $active ? 'currentColor' : 'none'};
   }
 `;
 
 const ContentArea = styled.div`
-  padding: ${({ variant }) => variant === 'list' ? '12px 16px' : '16px'};
+  padding: ${({ $variant }) => $variant === 'list' ? '12px 16px' : '16px'};
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: ${({ variant }) => variant === 'list' ? '4px' : '8px'};
+  gap: ${({ $variant }) => $variant === 'list' ? '4px' : '8px'};
   flex: 1;
   overflow: hidden;
 `;
@@ -105,9 +105,9 @@ export const ServiceCard = ({
   const bgImage = servico.imagemUrl || `https://ui-avatars.com/api/?name=${servico.nome.replace(' ', '+')}&background=DDA7A5&color=fff&size=500`;
 
   return (
-    <CardContainer variant={variant}>
-      <ImageArea bgImage={bgImage} variant={variant}>
-        <FavoriteBtn active={isFavoritado} onClick={(e) => {
+    <CardContainer $variant={variant}>
+      <ImageArea $bgImage={bgImage} $variant={variant}>
+        <FavoriteBtn $active={isFavoritado} onClick={(e) => {
           e.stopPropagation();
           onFavoritar(servico.id);
         }}>
@@ -115,7 +115,7 @@ export const ServiceCard = ({
         </FavoriteBtn>
       </ImageArea>
 
-      <ContentArea variant={variant}>
+      <ContentArea $variant={variant}>
         <Title style={{ fontSize: variant === 'list' ? '16px' : '18px' }}>{servico.nome}</Title>
         <Description style={{ WebkitLineClamp: variant === 'list' ? 1 : 2 }}>{servico.descricao}</Description>
 

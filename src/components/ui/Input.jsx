@@ -43,15 +43,15 @@ const StyledInput = styled.input`
   width: 100%;
   padding: 12px 14px;
   border-radius: ${({ theme }) => theme.radii.sm};
-  border: 1px solid ${({ theme, error }) => (error ? theme.colors.error : theme.colors.border)};
+  border: 1px solid ${({ theme, $error }) => ($error ? theme.colors.error : theme.colors.border)};
   background-color: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.textPrimary};
   font-size: ${({ theme }) => theme.typography.sizes.md};
   transition: all 0.2s;
 
   &:focus {
-    border-color: ${({ theme, error }) => (error ? theme.colors.error : theme.colors.primary)};
-    box-shadow: 0 0 0 3px ${({ theme, error }) => (error ? 'rgba(239, 68, 68, 0.1)' : 'rgba(221, 167, 165, 0.2)')};
+    border-color: ${({ theme, $error }) => ($error ? theme.colors.error : theme.colors.primary)};
+    box-shadow: 0 0 0 3px ${({ theme, $error }) => ($error ? `${theme.colors.error}1A` : `${theme.colors.primary}33`)}; /* 1A=10%, 33=20% */
   }
 
   &::placeholder {
@@ -80,7 +80,7 @@ export const Input = ({ label, error, type, ...props }) => {
       {label && <Label>{label}</Label>}
       <InputContainer>
         <StyledInput
-          error={error}
+          $error={error}
           type={inputType}
           {...props}
           style={isPassword ? { paddingRight: '44px' } : {}}

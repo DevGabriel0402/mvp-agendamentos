@@ -3,15 +3,17 @@ import { useParams } from 'react-router-dom';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
-export function useTenant() {
-    const { tenantSlug } = useParams();
+export function useTenant(slugOverride = null) {
+    const { tenantSlug: routeSlug } = useParams();
+    const tenantSlug = slugOverride || routeSlug;
     const [tenant, setTenant] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        if (!tenantSlug) {
+        if (!tenantSlug || tenantSlug === 'admin' || tenantSlug === 'master' || tenantSlug === 'entrada') {
             setLoading(false);
+            setTenant(null);
             return;
         }
 

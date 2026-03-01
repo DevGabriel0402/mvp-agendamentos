@@ -1,13 +1,23 @@
 import { useEffect } from 'react';
-import { AppRoutes } from './routes/AppRoutes';
-import { Toaster } from 'react-hot-toast';
+import { useLocation } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
+import { Toaster } from 'react-hot-toast';
 import { theme } from './styles/theme';
 import { GlobalStyle } from './styles/GlobalStyle';
+import { AppRoutes } from './routes/AppRoutes';
 import { useConfiguracoes } from './hooks/useConfiguracoes';
+import { useTenant } from './hooks/useTenant';
 
 function App() {
-  const { config, loading } = useConfiguracoes();
+  const location = useLocation();
+  // Extrai o primeiro segmento da URL (slug da empresa)
+  const pathParts = location.pathname.split('/').filter(Boolean);
+  const potentialSlug = pathParts[0];
+
+  const { tenant, loading: loadingTenant } = useTenant(potentialSlug);
+  const { config, loading: loadingConfig } = useConfiguracoes(tenant);
+
+  const loading = loadingTenant || loadingConfig;
 
   // Se carregando ou não tiver corTema, usa o padrão. Se tiver, cria um objeto customizado.
   const customTheme = {

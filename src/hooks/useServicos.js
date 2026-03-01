@@ -14,11 +14,14 @@ export const useServicos = (tenantId) => {
             setLoading(true);
             const q = query(
                 collection(db, 'servicos'),
-                where('empresaId', '==', tenantId),
-                orderBy('createdAt', 'desc')
+                where('empresaId', '==', tenantId)
             );
             const querySnapshot = await getDocs(q);
             const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            // Ordenação local para evitar necessidade de índice composto no Firestore
+            data.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
             setServicos(data);
         } catch (err) {
             console.error("Erro ao buscar serviços:", err);

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import styled from 'styled-components';
 import { FiCalendar, FiLogIn, FiArrowRight } from 'react-icons/fi';
 import { Button } from '../../components/ui/Button';
@@ -57,17 +57,26 @@ const ErrorText = styled.p`
 
 export default function Entrada() {
   const navigate = useNavigate();
+  const { tenantSlug } = useParams();
   const { loginAnonimo } = useAuth();
   const { config } = useConfiguracoes();
   const [loadingAction, setLoadingAction] = useState(false);
   const [error, setError] = useState('');
+
+  // Salvar último tenant visitado para facilitar o retorno via /
+  useEffect(() => {
+    if (tenantSlug) {
+      localStorage.setItem('mvp_ultimo_tenant', tenantSlug);
+    }
+  }, [tenantSlug]);
 
   const handleAgendarAgora = async () => {
     try {
       setError('');
       setLoadingAction(true);
       await loginAnonimo();
-      navigate('/home', { replace: true });
+      // Usar caminho relativo para manter o slug na URL
+      navigate('home', { replace: true });
     } catch (err) {
       setError('Falha ao iniciar. Tente novamente.');
       console.error(err);
@@ -90,14 +99,14 @@ export default function Entrada() {
       </LogoBox>
 
       <ActionsBox>
-        <Button size="large" fullWidth onClick={handleAgendarAgora} disabled={loadingAction}>
+        <Button $size="large" $fullWidth onClick={handleAgendarAgora} disabled={loadingAction}>
           <span>Agendar Agora</span> <FiArrowRight />
         </Button>
 
-        {/* Link escondidinho/sutil para Admin, comum em SaaS */}
+        {/* Link para Admin da empresa logada */}
         <Button
-          variant="ghost"
-          onClick={() => navigate('/admin')}
+          $variant="ghost"
+          onClick={() => navigate('admin')}
           style={{ marginTop: '24px', opacity: 0.6 }}
         >
           <FiLogIn /> Sou o Administrador

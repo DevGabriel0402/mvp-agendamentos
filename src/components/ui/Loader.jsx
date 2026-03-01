@@ -14,8 +14,8 @@ const LoaderWrapper = styled.div`
   align-items: center;
   justify-content: center;
   width: 100%;
-  height: ${({ fullHeight }) => fullHeight ? '100vh' : 'auto'};
-  padding: ${({ fullHeight }) => fullHeight ? '0' : '40px 0'};
+  height: ${({ $fullHeight }) => $fullHeight ? '100vh' : 'auto'};
+  padding: ${({ $fullHeight }) => $fullHeight ? '0' : '40px 0'};
   color: ${({ theme }) => theme.colors.primary};
 `;
 
@@ -36,12 +36,12 @@ const LoadingText = styled.p`
 `;
 
 export const Loader = ({ text = "Carregando...", fullHeight = false, size }) => {
-    return (
-        <LoaderWrapper fullHeight={fullHeight}>
-            <IconContainer size={size}>
-                <FiCalendar />
-            </IconContainer>
-            {text && <LoadingText>{text}</LoadingText>}
-        </LoaderWrapper>
-    );
+  return (
+    <LoaderWrapper $fullHeight={fullHeight}>
+      <IconContainer size={size}>
+        <FiCalendar />
+      </IconContainer>
+      {text && <LoadingText>{text}</LoadingText>}
+    </LoaderWrapper>
+  );
 };

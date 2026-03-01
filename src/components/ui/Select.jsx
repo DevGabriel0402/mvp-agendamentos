@@ -23,10 +23,10 @@ const SelectBox = styled.div`
   padding: 14px 16px;
   background-color: ${({ theme, $error }) => $error ? 'rgba(239, 68, 68, 0.05)' : theme.colors.surface};
   border: 1px solid ${({ theme, $error, $isOpen }) => {
-        if ($error) return theme.colors.error;
-        if ($isOpen) return theme.colors.primary;
-        return theme.colors.border;
-    }};
+    if ($error) return theme.colors.error;
+    if ($isOpen) return theme.colors.primary;
+    return theme.colors.border;
+  }};
   border-radius: ${({ theme }) => theme.radii.md};
   color: ${({ theme, $hasValue }) => $hasValue ? theme.colors.textPrimary : theme.colors.textSecondary};
   font-size: ${({ theme }) => theme.typography.sizes.md};
@@ -82,12 +82,13 @@ const OptionItem = styled.li`
   transition: background-color 0.2s;
 
   &:hover {
-    background-color: rgba(221, 167, 165, 0.1);
+    background-color: ${({ theme }) => `${theme.colors.primary}1A`}; /* 10% opacidade */
   }
 
   &.selected {
-    background-color: rgba(221, 167, 165, 0.15);
-    color: ${({ theme }) => theme.colors.primaryDark};
+    background-color: ${({ theme }) => `${theme.colors.primary}26`}; /* 15% opacidade */
+    color: ${({ theme }) => theme.colors.primary};
+    filter: brightness(0.9);
     font-weight: ${({ theme }) => theme.typography.weights.semiBold};
   }
 `;
@@ -99,60 +100,60 @@ const ErrorText = styled.span`
 `;
 
 export function Select({ label, options = [], value, onChange, placeholder = 'Selecione...', error, ...props }) {
-    const [isOpen, setIsOpen] = useState(false);
-    const wrapperRef = useRef(null);
+  const [isOpen, setIsOpen] = useState(false);
+  const wrapperRef = useRef(null);
 
-    // Fechar ao clicar fora
-    useEffect(() => {
-        function handleClickOutside(event) {
-            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
-    const handleSelect = (optionValue) => {
-        onChange({ target: { value: optionValue } });
+  // Fechar ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
         setIsOpen(false);
-    };
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
-    const selectedOption = options.find(opt => opt.value === value);
+  const handleSelect = (optionValue) => {
+    onChange({ target: { value: optionValue } });
+    setIsOpen(false);
+  };
 
-    return (
-        <SelectWrapper ref={wrapperRef} {...props}>
-            {label && <Label>{label}</Label>}
-            <SelectBox
-                $error={error}
-                $isOpen={isOpen}
-                $hasValue={!!value}
-                onClick={() => setIsOpen(!isOpen)}
+  const selectedOption = options.find(opt => opt.value === value);
+
+  return (
+    <SelectWrapper ref={wrapperRef} {...props}>
+      {label && <Label>{label}</Label>}
+      <SelectBox
+        $error={error}
+        $isOpen={isOpen}
+        $hasValue={!!value}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <span>{selectedOption ? selectedOption.label : placeholder}</span>
+        <FiChevronDown size={20} />
+      </SelectBox>
+
+      {isOpen && (
+        <OptionsContainer>
+          {options.map((option) => (
+            <OptionItem
+              key={option.value}
+              className={value === option.value ? 'selected' : ''}
+              onClick={() => handleSelect(option.value)}
             >
-                <span>{selectedOption ? selectedOption.label : placeholder}</span>
-                <FiChevronDown size={20} />
-            </SelectBox>
+              {option.label}
+            </OptionItem>
+          ))}
+          {options.length === 0 && (
+            <OptionItem style={{ color: '#8b8685', cursor: 'default' }} onClick={e => e.stopPropagation()}>
+              Nenhuma opção
+            </OptionItem>
+          )}
+        </OptionsContainer>
+      )}
 
-            {isOpen && (
-                <OptionsContainer>
-                    {options.map((option) => (
-                        <OptionItem
-                            key={option.value}
-                            className={value === option.value ? 'selected' : ''}
-                            onClick={() => handleSelect(option.value)}
-                        >
-                            {option.label}
-                        </OptionItem>
-                    ))}
-                    {options.length === 0 && (
-                        <OptionItem style={{ color: '#8b8685', cursor: 'default' }} onClick={e => e.stopPropagation()}>
-                            Nenhuma opção
-                        </OptionItem>
-                    )}
-                </OptionsContainer>
-            )}
-
-            {error && <ErrorText>{error}</ErrorText>}
-        </SelectWrapper>
-    );
+      {error && <ErrorText>{error}</ErrorText>}
+    </SelectWrapper>
+  );
 }
